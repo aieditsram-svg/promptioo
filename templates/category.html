@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__NAME__ – Promptioo Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/style.css"></head>
+<body><main class="wrap">
+<div class="top"><a class="brand" href="index.html">Promptioo<b>.</b></a><a class="back" href="index.html">All collections</a></div>
+<div class="head"><h1>__NAME__</h1><input id="q" type="search" placeholder="Search __NAME__ prompts" aria-label="Search prompts"></div>
+<div class="tabs" id="tabs" role="group" aria-label="Categories"></div>
+<div class="grid" id="grid"></div>
+<div class="empty" id="empty" hidden></div>
+<div id="more" style="text-align:center;margin:20px 0"><button class="btn" id="mb" hidden>Load more</button></div>
+</main>
+<script>
+var KEY='__KEY__',NAME='__NAME__',IDX=null,sub=decodeURIComponent(location.hash.slice(1))||'all',page=0,busy=false,done=false,mode='list',SEARCH=null,gen=0;
+var $=function(i){return document.getElementById(i)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var card=function(r){return '<a class="card" href="viewer.html?c='+KEY+'&id='+r[0]+'"><img src="'+esc(r[2])+'" alt="'+esc(r[1])+'" loading="lazy" decoding="async"><em>'+esc(r[1])+'</em></a>'};
+function tabs(){$('tabs').innerHTML=IDX.tabs.map(function(t){return '<button class="tab" data-s="'+t.sl+'" aria-pressed="'+(mode==='list'&&t.sl===sub)+'">'+esc(t.name)+' '+t.count+'</button>'}).join('')}
+function reset(){gen++;page=0;done=false;busy=false;$('grid').innerHTML='';$('empty').hidden=true;$('mb').hidden=true}
+function empty(m){$('empty').hidden=false;$('empty').innerHTML=m}
+function next(){
+ if(busy||done||mode!=='list')return;
+ var t=IDX.tabs.filter(function(x){return x.sl===sub})[0];
+ if(!t){return empty('That category does not exist yet.')}
+ if(page>=t.pages){done=true;return}
+ busy=true;var g=gen;page++;
+ fetch('data/'+KEY+'/'+sub+'-'+page+'.json').then(function(r){return r.json()}).then(function(rows){
+  if(g!==gen)return;
+  $('grid').insertAdjacentHTML('beforeend',rows.map(card).join(''));
+  busy=false;done=page>=t.pages;$('mb').hidden=done;
+  if(!t.count)empty('No prompts yet. Add a CSV such as <code>data/'+KEY+'/portrait.csv</code> and run the workflow.');
+ }).catch(function(){busy=false;page--;$('mb').hidden=false;$('mb').textContent='Try again'});
+}
+function go(sl){mode='list';sub=sl;history.replaceState(null,'','#'+sl);$('q').value='';reset();tabs();next()}
+function find(q){
+ mode='find';reset();tabs();
+ var run=function(){var w=q.toLowerCase(),hits=SEARCH.filter(function(r){return(r[1]+' '+r[2]+' '+r[3]).toLowerCase().indexOf(w)>-1});
+  $('grid').innerHTML=hits.slice(0,150).map(function(r){return card([r[0],r[1],r[4]])}).join('');
+  if(!hits.length)empty('No prompts match that search.');else if(hits.length>150)empty('Showing the first 150 of '+hits.length+' matches. Type more to narrow it down.')};
+ if(SEARCH)run();else fetch('data/'+KEY+'/search.json').then(function(r){return r.json()}).then(function(d){SEARCH=d;if(mode==='find')run()})
+}
+$('tabs').onclick=function(e){var b=e.target.closest('.tab');if(b)go(b.dataset.s)};
+var tm;$('q').oninput=function(){var v=this.value.trim();clearTimeout(tm);tm=setTimeout(function(){v.length>1?find(v):(mode==='find'&&go(sub))},250)};
+$('mb').onclick=next;
+new IntersectionObserver(function(e){if(e[0].isIntersecting)next()},{rootMargin:'600px'}).observe($('more'));
+fetch('data/'+KEY+'/index.json').then(function(r){return r.json()}).then(function(d){IDX=d;if(!d.tabs.some(function(t){return t.sl===sub}))sub='all';tabs();next()})
+ .catch(function(){empty('Could not load this collection.')});
+</script></body></html>

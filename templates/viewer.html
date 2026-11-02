@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Promptioo Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/style.css"></head>
+<body><main class="wrap" id="app">
+<div class="top"><a class="brand" href="index.html">Promptioo<b>.</b></a><a class="back" id="back" href="index.html">All collections</a></div>
+<div id="out"></div>
+</main>
+<div class="box" id="box" hidden><button aria-label="Close">&times;</button><img alt=""></div>
+<script>
+var P=new URLSearchParams(location.search),key=P.get('c')||'',id=+P.get('id'),cur=0,it=null;
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var out=document.getElementById('out'),box=document.getElementById('box'),bimg=box.querySelector('img');
+function fail(m){out.innerHTML='<div class="empty" style="margin-top:32px">'+m+' <a href="index.html" style="color:var(--sea)">Back to gallery</a></div>'}
+if(!/^[a-z]+$/.test(key))fail('This image link is incomplete.');
+else Promise.all([fetch('data/'+key+'/index.json').then(function(r){return r.json()}),fetch('data/'+key+'/items/'+Math.floor(id/__SHARD__)+'.json').then(function(r){return r.json()})]).then(function(a){
+ var D=a[0];it=a[1][id];
+ if(!it)return fail('That prompt was not found.');
+ document.title=it.t+' – Promptioo Gallery';
+ var back=document.getElementById('back');back.href=key+'.html#'+it.sl;back.textContent='Back to '+D.name+' / '+it.s;
+ var big=function(u){return /googleusercontent|blogger/.test(u)?u.replace(/\/s\d+(-c)?\//,'/s1600/'):u};
+ it.m=it.m.map(big);
+ out.innerHTML='<div class="view"><div class="stage"><button class="main" id="mainb" aria-label="Open full size"><img id="mi" alt="'+esc(it.t)+'"></button><div class="thumbs" id="th"></div></div>'+
+ '<div class="info"><div class="chips"><a class="chip" href="'+key+'.html">'+esc(D.name)+'</a><a class="chip" href="'+key+'.html#'+it.sl+'">'+esc(it.s)+'</a></div>'+
+ '<h1>'+esc(it.t)+'</h1><div class="prompt" id="pr">'+esc(it.p)+'</div><button class="btn" id="cp">Copy prompt</button>'+
+ '<div class="chips" style="margin-top:20px">'+it.k.map(function(k){return '<span class="chip">'+esc(k)+'</span>'}).join('')+'</div>'+
+ '<div class="nav">'+(it.pv?'<a href="viewer.html?c='+key+'&id='+it.pv+'">Previous</a>':'')+(it.nx?'<a href="viewer.html?c='+key+'&id='+it.nx+'">Next</a>':'')+'</div></div></div><div id="rel"></div>';
+ fetch('data/'+key+'/'+it.sl+'-'+it.pg+'.json').then(function(r){return r.json()}).then(function(rows){
+  rows=rows.filter(function(r){return r[0]!==id}).slice(0,12);if(!rows.length)return;
+  document.getElementById('rel').innerHTML='<h3>More in '+esc(it.s)+'</h3><div class="grid">'+rows.map(function(r){return '<a class="card" href="viewer.html?c='+key+'&id='+r[0]+'"><img src="'+esc(r[2])+'" alt="'+esc(r[1])+'" loading="lazy"><em>'+esc(r[1])+'</em></a>'}).join('')+'</div>'}).catch(function(){});
+ var th=document.getElementById('th');
+ function show(n){cur=n;document.getElementById('mi').src=it.m[n];bimg.src=it.m[n];
+  [].forEach.call(th.children,function(b,j){b.setAttribute('aria-current',j===n)})}
+ if(it.m.length>1)th.innerHTML=it.m.map(function(u,j){return '<button aria-label="Image '+(j+1)+'"><img src="'+esc(u)+'" alt=""></button>'}).join('');
+ th.onclick=function(e){var b=e.target.closest('button');if(b)show([].indexOf.call(th.children,b))};
+ show(0);
+ document.getElementById('mainb').onclick=function(){bimg.src=it.m[cur];box.hidden=false};
+ document.getElementById('cp').onclick=function(){var b=this;(navigator.clipboard?navigator.clipboard.writeText(it.p):Promise.reject()).then(function(){b.textContent='Copied'}).catch(function(){
+  var r=document.createRange();r.selectNodeContents(document.getElementById('pr'));var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Press Ctrl+C to copy'});
+  setTimeout(function(){b.textContent='Copy prompt'},2000)};
+ box.onclick=function(){box.hidden=true};
+ document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')box.hidden=true;
+  if(e.key==='ArrowRight'&&it.m.length>1)show((cur+1)%it.m.length);
+  if(e.key==='ArrowLeft'&&it.m.length>1)show((cur+it.m.length-1)%it.m.length)});
+}).catch(function(){fail('Could not load this collection.')});
+</script></body></html>

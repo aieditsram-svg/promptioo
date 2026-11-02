@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Promptioo Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/style.css"></head>
+<body><main class="wrap">
+<p class="brand">Promptioo<b>.</b></p>
+<section class="hero"><h1>Welcome to Promptioo Gallery</h1>
+<p class="lead">Pick a collection, browse the images, and copy the prompt behind any of them.</p></section>
+<nav class="tiles" id="tiles" aria-label="Collections"></nav>
+</main>
+<script id="d" type="application/json">__DATA__</script>
+<script>
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+document.getElementById('tiles').innerHTML=JSON.parse(document.getElementById('d').textContent).map(function(c){
+ return '<a class="tile" href="'+c.key+'.html">'+(c.cover?'<img src="'+esc(c.cover)+'" alt="" loading="lazy">':'<i class="ph"></i>')+
+ '<div><h2>'+esc(c.name)+'</h2><span>'+c.count+(c.count===1?' prompt':' prompts')+'</span></div></a>'}).join('');
+</script></body></html>
