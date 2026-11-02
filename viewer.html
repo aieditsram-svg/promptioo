@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Viewer – Ai Edits Ram</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><div class="wrap">
+  <header class="top glass"><a class="brand" href="index.html">Ai Edits Ram</a><div class="tools"><a class="btn ghost" id="back" href="index.html">← Back</a><a class="btn ghost" id="prev" hidden>‹ Prev</a><a class="btn ghost" id="next" hidden>Next ›</a></div></header>
+  <main id="content"><div class="msg">Loading…</div></main>
+</div>
+<script src="assets/app.js"></script>
+<script>
+const {el,load,catUrl,kwUrl,viewUrl,card}=App;
+const id=new URLSearchParams(location.search).get('id');
+const content=document.getElementById('content');
+load().then(all=>{
+  const it=all.find(i=>i.id===id);
+  if(!it){content.innerHTML='';content.append(el('div',{class:'msg',text:'Image not found.'}));return}
+  document.title=it.title+' – Ai Edits Ram';
+  document.getElementById('back').href=catUrl(it.category);
+  const same=all.filter(i=>i.category===it.category),k=same.indexOf(it);
+  if(same.length>1){const pv=same[(k-1+same.length)%same.length],nx=same[(k+1)%same.length];
+    for(const [bid,t] of [['prev',pv],['next',nx]]){const b=document.getElementById(bid);b.href=viewUrl(t);b.hidden=false}}
+  const main=el('img',{class:'main-img',src:it.images[0]||'',alt:it.title});
+  const left=el('div',{},el('a',{href:it.images[0]||'#',target:'_blank',rel:'noopener'},main));
+  if(it.images.length>1){const th=el('div',{class:'thumbs'});
+    it.images.forEach((u,n)=>{const t=el('img',{src:u,alt:'Image '+(n+1),class:n?'':'on'});
+      t.onclick=()=>{main.src=u;main.parentNode.href=u;th.querySelectorAll('img').forEach(x=>x.classList.remove('on'));t.classList.add('on')};th.append(t)});
+    left.append(th)}
+  const ta=el('textarea',{readonly:''});ta.value=it.prompt;
+  const copy=el('button',{class:'btn',text:'Copy prompt'});
+  copy.onclick=async()=>{try{await navigator.clipboard.writeText(it.prompt)}catch(e){ta.select();document.execCommand('copy')}copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy prompt',1800)};
+  const ai=(label,url)=>{const b=el('button',{class:'btn ghost',text:label});
+    b.onclick=async()=>{try{await navigator.clipboard.writeText(it.prompt)}catch(e){}window.open(url,'_blank')};return b};
+  const enc=encodeURIComponent(it.prompt);
+  const right=el('div',{},
+    el('h1',{text:it.title}),
+    el('a',{class:'pill',href:catUrl(it.category),text:it.category}),
+    el('div',{class:'eyebrow',text:'Prompt'}),ta,
+    el('div',{class:'row'},copy,ai('Gemini','https://gemini.google.com/app?prompt='+enc),ai('ChatGPT','https://chatgpt.com/?q='+enc),ai('Meta AI','https://www.meta.ai/')),
+    it.keywords.length?el('div',{},el('div',{class:'eyebrow',text:'Keywords'}),el('div',{class:'row'},it.keywords.map(w=>el('a',{class:'pill',href:kwUrl(w),text:w})))):null);
+  content.innerHTML='';content.append(el('div',{class:'view glass'},left,right));
+  const rel=same.filter(i=>i!==it).slice(0,8);
+  if(rel.length)content.append(el('h2',{},el('span',{text:'More in '+it.category})),el('div',{class:'grid'},rel.map(card)));
+}).catch(e=>{content.innerHTML='';content.append(el('div',{class:'msg',text:'Could not load data/prompts.csv ('+e.message+').'}))});
+</script></body></html>
