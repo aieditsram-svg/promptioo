@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Promptioo Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/style.css"></head>
+<body><main class="wrap" id="app"></main>
+<div class="box" id="box" hidden><button aria-label="Close">&times;</button><img alt=""></div>
+<script id="d" type="application/json">__DATA__</script>
+<script>
+var SUM=JSON.parse(document.getElementById('d').textContent),SHARD=__SHARD__,APP=document.getElementById('app'),box=document.getElementById('box'),bimg=box.querySelector('img');
+var IDX={},SEARCH={},gen=0,OBS=null,V=null;
+var $=function(i){return document.getElementById(i)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var json=function(u){return fetch(u).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})};
+var card=function(k,r){return '<a class="card" href="#/view/'+k+'/'+r[0]+'"><img src="'+esc(r[2])+'" alt="'+esc(r[1])+'" loading="lazy" decoding="async"><em>'+esc(r[1])+'</em></a>'};
+var topbar=function(back,label){return '<div class="top"><a class="brand" href="#/">Promptioo<b>.</b></a><a class="back" href="'+back+'">'+esc(label)+'</a></div>'};
+function msg(m){APP.innerHTML=topbar('#/','All collections')+'<div class="empty" style="margin-top:32px">'+m+'</div>'}
+
+function home(){
+ document.title='Promptioo Gallery';
+ APP.innerHTML='<p class="brand">Promptioo<b>.</b></p><section class="hero"><h1>Welcome to Promptioo Gallery</h1><p class="lead">Pick a collection, browse the images, and copy the prompt behind any of them.</p></section><nav class="tiles" aria-label="Collections">'+
+ SUM.map(function(c){return '<a class="tile" href="#/'+c.key+'">'+(c.cover?'<img src="'+esc(c.cover)+'" alt="" loading="lazy">':'<i class="ph"></i>')+'<div><h2>'+esc(c.name)+'</h2><span>'+c.count+(c.count===1?' prompt':' prompts')+'</span></div></a>'}).join('')+'</nav>';
+}
+
+function category(key,sub){
+ var meta=SUM.filter(function(c){return c.key===key})[0];if(!meta)return msg('That collection does not exist.');
+ document.title=meta.name+' – Promptioo Gallery';
+ APP.innerHTML=topbar('#/','All collections')+'<div class="head"><h1>'+esc(meta.name)+'</h1><input id="q" type="search" placeholder="Search '+esc(meta.name)+' prompts" aria-label="Search prompts"></div><div class="tabs" id="tabs"></div><div class="grid" id="grid"></div><div class="empty" id="empty" hidden></div><div id="more" style="text-align:center;margin:20px 0"><button class="btn" id="mb" hidden>Load more</button></div>';
+ var g=gen,page=0,busy=false,done=false,mode='list',t=null,tm;
+ var empty=function(m){$('empty').hidden=false;$('empty').innerHTML=m};
+ function tabs(){$('tabs').innerHTML=IDX[key].tabs.map(function(x){return '<button class="tab" data-s="'+x.sl+'" aria-pressed="'+(mode==='list'&&x.sl===sub)+'">'+esc(x.name)+' '+x.count+'</button>'}).join('')}
+ function next(){
+  if(busy||done||mode!=='list'||g!==gen)return;
+  if(page>=t.pages){done=true;return}
+  busy=true;page++;
+  json('data/'+key+'/'+sub+'-'+page+'.json').then(function(rows){
+   if(g!==gen)return;
+   $('grid').insertAdjacentHTML('beforeend',rows.map(function(r){return card(key,r)}).join(''));
+   busy=false;done=page>=t.pages;$('mb').hidden=true;
+   if(!t.count)empty('No prompts yet. Add a CSV such as <code>data/'+key+'/portrait.csv</code> and run the workflow.');
+  }).catch(function(){if(g!==gen)return;busy=false;page--;$('mb').hidden=false;$('mb').textContent='Try again'});
+ }
+ function find(q){
+  mode='find';tabs();$('grid').innerHTML='';$('empty').hidden=true;$('mb').hidden=true;
+  var run=function(){if(mode!=='find'||g!==gen)return;var w=q.toLowerCase(),hits=SEARCH[key].filter(function(r){return(r[1]+' '+r[2]+' '+r[3]).toLowerCase().indexOf(w)>-1});
+   $('grid').innerHTML=hits.slice(0,150).map(function(r){return card(key,[r[0],r[1],r[4]])}).join('');
+   if(!hits.length)empty('No prompts match that search.');else if(hits.length>150)empty('Showing the first 150 of '+hits.length+' matches. Type more to narrow it down.')};
+  if(SEARCH[key])run();else json('data/'+key+'/search.json').then(function(d){SEARCH[key]=d;run()}).catch(function(){empty('Search could not load.')});
+ }
+ function ready(){
+  if(!IDX[key].tabs.some(function(x){return x.sl===sub}))sub='all';
+  t=IDX[key].tabs.filter(function(x){return x.sl===sub})[0];
+  tabs();next();
+  $('tabs').onclick=function(e){var b=e.target.closest('.tab');if(b)location.hash='#/'+key+'/'+b.dataset.s};
+  $('q').oninput=function(){var v=this.value.trim();clearTimeout(tm);tm=setTimeout(function(){if(v.length>1)find(v);else if(mode==='find'){mode='list';$('grid').innerHTML='';$('empty').hidden=true;page=0;done=false;tabs();next()}},250)};
+  $('mb').onclick=next;
+  if(OBS)OBS.disconnect();
+  OBS=new IntersectionObserver(function(e){if(e[0].isIntersecting)next()},{rootMargin:'600px'});OBS.observe($('more'));
+ }
+ if(IDX[key])ready();else json('data/'+key+'/index.json').then(function(d){IDX[key]=d;if(g===gen)ready()}).catch(function(){empty('Could not load this collection.')});
+}
+
+function viewer(key,id){
+ var meta=SUM.filter(function(c){return c.key===key})[0];if(!meta||!id)return msg('This image link is incomplete.');
+ var g=gen;
+ Promise.all([IDX[key]?IDX[key]:json('data/'+key+'/index.json'),json('data/'+key+'/items/'+Math.floor(id/SHARD)+'.json')]).then(function(a){
+  if(g!==gen)return;IDX[key]=a[0];var it=a[1][id],cur=0;
+  if(!it)return msg('That prompt was not found.');
+  document.title=it.t+' – Promptioo Gallery';
+  var big=function(u){return /googleusercontent|blogger/.test(u)?u.replace(/\/s\d+(-c)?\//,'/s1600/'):u};
+  var m=it.m.map(big);
+  APP.innerHTML=topbar('#/'+key+'/'+it.sl,'Back to '+meta.name+' / '+it.s)+
+  '<div class="view"><div class="stage"><button class="main" id="mainb" aria-label="Open full size"><img id="mi" alt="'+esc(it.t)+'"></button><div class="thumbs" id="th"></div></div>'+
+  '<div class="info"><div class="chips"><a class="chip" href="#/'+key+'">'+esc(meta.name)+'</a><a class="chip" href="#/'+key+'/'+it.sl+'">'+esc(it.s)+'</a></div>'+
+  '<h1>'+esc(it.t)+'</h1><div class="prompt" id="pr">'+esc(it.p)+'</div><button class="btn" id="cp">Copy prompt</button>'+
+  '<div class="chips" style="margin-top:20px">'+it.k.map(function(k){return '<span class="chip">'+esc(k)+'</span>'}).join('')+'</div>'+
+  '<div class="nav">'+(it.pv?'<a href="#/view/'+key+'/'+it.pv+'">Previous</a>':'')+(it.nx?'<a href="#/view/'+key+'/'+it.nx+'">Next</a>':'')+'</div></div></div><div id="rel"></div>';
+  json('data/'+key+'/'+it.sl+'-'+it.pg+'.json').then(function(rows){
+   rows=rows.filter(function(r){return r[0]!==id}).slice(0,12);if(!rows.length||g!==gen)return;
+   $('rel').innerHTML='<h3>More in '+esc(it.s)+'</h3><div class="grid">'+rows.map(function(r){return card(key,r)}).join('')+'</div>'}).catch(function(){});
+  var th=$('th');
+  function show(n){cur=n;$('mi').src=m[n];bimg.src=m[n];[].forEach.call(th.children,function(b,j){b.setAttribute('aria-current',j===n)})}
+  V={n:m.length,show:show,cur:function(){return cur}};
+  if(m.length>1)th.innerHTML=m.map(function(u,j){return '<button aria-label="Image '+(j+1)+'"><img src="'+esc(u)+'" alt=""></button>'}).join('');
+  th.onclick=function(e){var b=e.target.closest('button');if(b)show([].indexOf.call(th.children,b))};
+  show(0);
+  $('mainb').onclick=function(){bimg.src=m[cur];box.hidden=false};
+  $('cp').onclick=function(){var b=this;(navigator.clipboard?navigator.clipboard.writeText(it.p):Promise.reject()).then(function(){b.textContent='Copied'}).catch(function(){
+   var r=document.createRange();r.selectNodeContents($('pr'));var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Press Ctrl+C to copy'});
+   setTimeout(function(){b.textContent='Copy prompt'},2000)};
+ }).catch(function(){if(g===gen)msg('Could not load this prompt.')});
+}
+
+box.onclick=function(){box.hidden=true};
+document.addEventListener('keydown',function(e){
+ if(e.key==='Escape')box.hidden=true;
+ if(!V||V.n<2||!APP.querySelector('#mainb'))return;
+ if(e.key==='ArrowRight')V.show((V.cur()+1)%V.n);
+ if(e.key==='ArrowLeft')V.show((V.cur()+V.n-1)%V.n);
+});
+function route(){
+ gen++;V=null;box.hidden=true;if(OBS){OBS.disconnect();OBS=null}
+ var h=decodeURIComponent(location.hash.replace(/^#\/?/,'')).split('/');
+ if(!h[0])home();else if(h[0]==='view')viewer(h[1],+h[2]);else category(h[0],h[1]||'all');
+ window.scrollTo(0,0);
+}
+window.addEventListener('hashchange',route);route();
+</script></body></html>

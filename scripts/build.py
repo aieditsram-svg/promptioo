@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Splits big CSVs into small files so the gallery loads fast, then builds _site/.
+"""Splits big CSVs into small files so the gallery loads fast, then builds _site/ (one index.html + data files).
 data/<category>/<subcategory>.csv   e.g. data/men/portrait.csv
 Columns: title, prompt, keywords, image_urls   (optional: subcategory)
 
@@ -66,10 +66,8 @@ for key, label in CATS:
     for x in items: shards.setdefault(x['id'] // SHARD, {})[x['id']] = {k: x[k] for k in ('t', 'p', 'k', 'm', 's', 'sl', 'pv', 'nx', 'pg')}
     for n, d in shards.items(): write('data/%s/items/%d.json' % (key, n), jsn(d))
     write('data/%s/search.json' % key, jsn([[x['id'], x['t'], '|'.join(x['k']), x['s'], thumb(x['m'][0])] for x in items]))
-    write('%s.html' % key, render('category.html', name=label, key=key))
     summary.append({'key': key, 'name': label, 'count': len(items), 'cover': thumb(items[0]['m'][0]) if items else ''})
     total += len(items)
     print('  %-8s %6d prompts, %d tabs' % (label, len(items), len(groups)))
-write('index.html', render('index.html', data=jsn(summary)))
-write('viewer.html', render('viewer.html', shard=str(SHARD)))
+write('index.html', render('app.html', data=jsn(summary), shard=str(SHARD)))   # the whole site is this one page
 print('Built %d prompts into %s' % (total, OUT))

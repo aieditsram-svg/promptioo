@@ -1,5 +1,7 @@
 # Promptioo Gallery
 
+The whole site is one page, `index.html`, with `#` links (`#/men`, `#/men/portrait`, `#/view/men/12`), so there are no separate .html pages for a host to block.
+
 Home page says **Welcome to Promptioo Gallery** with 5 tiles: Men, Women, Kids, Couples, Other.
 Click a tile to see its prompts by category (Portrait, Photography, Cinematic...). Click an image to open it in the viewer with its prompt.
 
@@ -36,4 +38,4 @@ Tested with 30,000 prompts in one category. To run it by hand: GitHub repo > Act
     python3 scripts/build.py
     cd _site && python3 -m http.server
 
-Open http://localhost:8000 (opening the files directly will not work, the pages load data files).
+Open http://localhost:8000 (opening index.html directly will not work, the page loads data files).
