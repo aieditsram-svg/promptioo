@@ -1,22 +1,37 @@
-# Ai Edits Ram – CSV-driven gallery
+# Ai Edits Ram – your gallery + your viewer, driven by a CSV
 
-Static site (no build step) for GitHub Pages. All content comes from `data/prompts.csv`.
+The site uses YOUR original two pages as templates, so the design, ocean animations, side menu, blog promo slider and ads stay exactly as you made them.
 
-## CSV columns (header row required)
-`title, prompt, category, keywords, image_urls`
-- **category**: one of `Men`, `Women`, `Kids`, `Couples`, `Others` (any other value is placed in Others)
-- **keywords**: separate with `|` or `,` (wrap the cell in quotes if you use commas)
-- **image_urls**: one URL, or several separated by `|` (extra images show as thumbnails in the viewer; the first is the gallery cover)
-- Wrap `prompt` in double quotes if it has commas or line breaks; write a literal quote as `""`
-- Optional `id` column for stable links; otherwise the id is made from the title
+## 1. Add your two original files (one time)
+- Paste your **gallery code** (Glassmorphic Ocean Grid) into `templates/gallery.html`
+- Paste your **viewer code** (prompt card with promo + ads) into `templates/viewer.html`
+Paste them unchanged. The build fills in the menu tabs, images and prompts for you.
 
-## Pages
-- `index.html` – all categories (a section each), `?q=word` for search
-- `category.html?cat=Men` – dedicated category page listing every prompt in that category (Grid or List view, with in-category search)
-- `viewer.html?id=...` – opens when you click an image
+## 2. Fill data/prompts.csv
+Header row: `title, prompt, category, subcategory, keywords, image_urls`
+- **category**: Men, Women, Kids, Couples or Others (anything else goes to Others)
+- **subcategory**: the tabs on that category's page, e.g. Portrait, Photography, Cinematic, Fantasy
+- **keywords**: separate with `|` or `,`
+- **image_urls**: one URL, or several separated by `|` (each becomes a slide in the viewer)
+- Wrap `prompt` in double quotes if it contains commas or line breaks
+- Add new rows at the bottom (links use the row number)
 
-## Test locally
-`python3 -m http.server` then open http://localhost:8000 (opening the file directly will not load the CSV)
+## What gets built
+- `index.html` – the 5 categories
+- `men.html`, `women.html`, … – category pages (your gallery design, one tab per subcategory)
+- `men-portrait.html`, … – each subcategory (400 images per page; larger ones continue as "Portrait 2", "Portrait 3")
+- `viewer.html?id=123` – your viewer, loading prompt 123. Its keyword links and its "related posts" drawer use the CSV (prompts that share keywords), not Blogger.
+- `search.html?q=word` – search results in your gallery design (title, keywords, category), 400 per page. The search box on every gallery page goes here too.
 
-## Publish
-Push to GitHub, then Settings → Pages → Deploy from branch → main → / (root).
+## Publish on GitHub (rebuilds automatically)
+1. Upload everything in this folder to a new repo.
+2. **Add file → Create new file**, name it `.github/workflows/deploy.yml`, paste the contents of `deploy-workflow.yml`, commit.
+3. **Settings → Pages → Source: GitHub Actions**.
+4. After every change to the CSV or templates, check the **Actions** tab; a green tick means the site is live.
+
+## Test on your computer
+```
+python3 scripts/build.py
+cd _site && python3 -m http.server
+```
+Open http://localhost:8000
